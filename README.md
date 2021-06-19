@@ -1,3 +1,3 @@
-# haskell_json_parser
+# haskell json parser
 
 simple json parser implementation on pure haskell
