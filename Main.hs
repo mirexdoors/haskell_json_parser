@@ -5,6 +5,7 @@ module Main where
 
 import Control.Applicative
 import Data.Char
+import Control.Applicative
 
 data JsonValue = JsonNull
                | JsonBool Bool
@@ -15,10 +16,10 @@ data JsonValue = JsonNull
                deriving (Show, Eq)
 
 newtype Parser a = Parser
-	{ runParser ::  String -> Maybe (String, a) }
+    { runParser ::  String -> Maybe (String, a) }
 
 instance Functor Parser where
-	fmap f (Parser p) =
+    fmap f (Parser p) =
 	 Parser $ \input -> do
 	  (input', x) <- p input
 	  Just (input', f x)
@@ -31,12 +32,41 @@ instance Applicative Parser where
 		(input'', a) <- p2 input'
 		Just (input'', f a)
 
+instance Alternative Parser where
+    empty = Parser $ \_ -> Nothing
+    (Parser p1) <|> (Parser p2) =
+      Parser $ \input -> p1 input <|> p2 input
+
+
+jsonBool :: Parser JsonValue
+jsonBool = f <$> (stringP "true" <|> stringP "false")
+  where f "true" = JsonBool True
+        f "false" = JsonBool False
+        f _ = undefined
+
 jsonNull :: Parser JsonValue
-jsonNull = undefined
+jsonNull = (\_ -> JsonNull) <$> stringP "null"
+
+jsonNumber :: Parser JsonValue
+jsonNumber = f <$> notNull (spanP isDigit)
+    where f ds = JsonNumber $ read ds
+
+notNull :: Parser [a] -> Parser [a]
+notNull (Parser p) =  Parser $ \input -> do
+    (input', xs) <- p input
+    if null xs
+      then Nothing
+      else Just (input', xs)
+
+spanP :: (Char -> Bool) -> Parser String
+spanP f = Parser $ \input ->
+  let (token, rest) = span f input
+   in Just (rest, token)
+
 
 charP :: Char -> Parser Char
 charP x = Parser $ f
-					where
+                    where
 					  f (y:ys)
 					   | y == x = Just (ys, x)
 						 | otherwise = Nothing
@@ -46,7 +76,7 @@ stringP :: String -> Parser String
 stringP = sequenceA . map charP
 
 jsonValue :: Parser JsonValue
-jsonValue = undefined
+jsonValue = jsonNull <|> jsonBool <|> jsonNumber
 
 main :: IO()
 main = undefined
