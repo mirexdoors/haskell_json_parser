@@ -51,6 +51,20 @@ jsonNumber :: Parser JsonValue
 jsonNumber = f <$> notNull (spanP isDigit)
     where f ds = JsonNumber $ read ds
 
+
+jsonString :: Parser JsonValue
+jsonString = JsonString <$> (charP '"' *> stringLiteral <* charP '"')
+
+jsonArray :: Parser JsonValue
+jsonArray = charP '[' *> elements <* charP ']'
+    where elements = undefined
+
+
+-- NOTE: no escape support
+stringLiteral :: Parser String
+stringLiteral = spanP (/= '"')
+
+
 notNull :: Parser [a] -> Parser [a]
 notNull (Parser p) =  Parser $ \input -> do
     (input', xs) <- p input
@@ -76,7 +90,7 @@ stringP :: String -> Parser String
 stringP = sequenceA . map charP
 
 jsonValue :: Parser JsonValue
-jsonValue = jsonNull <|> jsonBool <|> jsonNumber
+jsonValue = jsonNull <|> jsonBool <|> jsonNumber <|> jsonString <|> jsonArray
 
 main :: IO()
 main = undefined
