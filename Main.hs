@@ -56,14 +56,22 @@ jsonString :: Parser JsonValue
 jsonString = JsonString <$> (charP '"' *> stringLiteral <* charP '"')
 
 jsonArray :: Parser JsonValue
-jsonArray = charP '[' *> elements <* charP ']'
-    where elements = undefined
+jsonArray = JsonArray <$> (charP '[' *>  ws *> elements <* ws <* charP ']')
+    where elements = sepBy (ws *> charP ',' <* ws) jsonValue
 
+jsonObject :: Parser JsonValue
+jsonObject = undefined
 
 -- NOTE: no escape support
 stringLiteral :: Parser String
 stringLiteral = spanP (/= '"')
 
+sepBy :: Parser a -> Parser b -> Parser [b]
+sepBy sep element = (:) <$> element <*> many (sep *> element) <|> pure []
+
+
+ws :: Parser String
+ws = spanP isSpace
 
 notNull :: Parser [a] -> Parser [a]
 notNull (Parser p) =  Parser $ \input -> do
@@ -90,7 +98,7 @@ stringP :: String -> Parser String
 stringP = sequenceA . map charP
 
 jsonValue :: Parser JsonValue
-jsonValue = jsonNull <|> jsonBool <|> jsonNumber <|> jsonString <|> jsonArray
+jsonValue = jsonNull <|> jsonBool <|> jsonNumber <|> jsonString <|> jsonArray <|> jsonObject
 
 main :: IO()
 main = undefined
