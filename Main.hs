@@ -60,11 +60,19 @@ jsonArray = JsonArray <$> (charP '[' *>  ws *> elements <* ws <* charP ']')
     where elements = sepBy (ws *> charP ',' <* ws) jsonValue
 
 jsonObject :: Parser JsonValue
-jsonObject = undefined
+jsonObject = JsonObject <$> (charP '{'
+             *> ws *>
+						 sepBy (ws  *> charP ',' <* ws) pair
+             <* ws <*
+             charP '}')
+  where pair =
+		(\key _ value -> (key, value)) <$> stringLiteral <*>
+		(ws *> charP ':' *> ws)
+		<*> jsonValue
 
 -- NOTE: no escape support
 stringLiteral :: Parser String
-stringLiteral = spanP (/= '"')
+stringLiteral = charP '"' *> spanP (/= '"') <* charP '"'
 
 sepBy :: Parser a -> Parser b -> Parser [b]
 sepBy sep element = (:) <$> element <*> many (sep *> element) <|> pure []
@@ -99,6 +107,11 @@ stringP = sequenceA . map charP
 
 jsonValue :: Parser JsonValue
 jsonValue = jsonNull <|> jsonBool <|> jsonNumber <|> jsonString <|> jsonArray <|> jsonObject
+
+parseFile :: FilePath -> Parser a -> IO (Maybe a)
+parseFile fileName parser = do
+	input <- readFile fileName
+	return (snd <$> runParser parser input)
 
 main :: IO()
 main = undefined
